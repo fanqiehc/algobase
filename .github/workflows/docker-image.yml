@@ -1,18 +1,64 @@
-name: Docker Image CI
+name: Build and Push to GHCR (Manual)
 
+# 改为 workflow_dispatch，支持手动触发
 on:
-  push:
-    branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Docker image version/tag'
+        required: false
+        default: 'latest'
+        type: string
+      platform:
+        description: 'Build platform'
+        required: false
+        default: 'linux/amd64'
+        type: choice
+        options:
+          - 'linux/amd64'
+          - 'linux/arm64'
+          - 'linux/amd64,linux/arm64'
 
 jobs:
-
-  build:
-
+  build-and-push:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
 
     steps:
     - uses: actions/checkout@v4
     - name: Build the Docker image
       run: docker build . --file Dockerfile --tag algobase:$(date +%s)
+      
+    - name: Log in to GitHub Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: Extract metadata
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: ghcr.io/${{ github.repository_owner }}/my-app
+        tags: |
+          type=raw,value=${{ github.event.inputs.version }}
+          type=sha,prefix=,suffix=,format=short
+    
+    - name: Build and push Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        platforms: ${{ github.event.inputs.platform }}
+        push: true
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+    
+    - name: Output image information
+      run: |
+        echo "✅ Docker image pushed successfully!"
+        echo "Image: ghcr.io/${{ github.repository_owner }}/my-app:${{ github.event.inputs.version }}"
+        echo "All tags: ${{ steps.meta.outputs.tags }}"
