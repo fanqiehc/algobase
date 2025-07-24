@@ -24,6 +24,7 @@ RUN conda config --set remote_connect_timeout_secs 90 && \
     conda config --set remote_read_timeout_secs 180 && \
     conda config --set remote_max_retries 10 && \
     conda config --set remote_backoff_factor 3 && \
+    conda tos accept --override-channels --channel defaults --channel https://repo.anaconda.com/pkgs/main --channel https://repo.anaconda.com/pkgs/r && \
     conda install -y pytorch==1.13.1 torchvision==0.14.1 torchaudio==0.13.1 pytorch-cuda=11.7 -c pytorch -c nvidia && \
     conda clean --all && \
     rm -rf /opt/conda/pkgs/*  # 确保删除 pkgs 目录
